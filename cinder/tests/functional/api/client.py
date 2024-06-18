@@ -230,6 +230,9 @@ class TestOpenStackClient(object):
     def put_volume(self, volume_id, volume):
         return self.api_put('/volumes/%s' % volume_id, volume)['volume']
 
+    def post_volume_action(self, volume_id, action):
+        return self.api_post('/volumes/%s/action' % volume_id, action)
+
     def get_snapshot(self, snapshot_id):
         return self.api_get('/snapshots/%s' % snapshot_id)['snapshot']
 

@@ -73,6 +73,10 @@ class FakeLoggingVolumeDriver(lvm.LVMVolumeDriver):
         pass
 
     @utils.trace_method
+    def can_revert_different_size(self):
+        return True
+
+    @utils.trace_method
     def ensure_export(self, context, volume):
         pass
 
