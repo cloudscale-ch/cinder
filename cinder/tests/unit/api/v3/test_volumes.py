@@ -48,6 +48,7 @@ from cinder.tests.unit import test
 from cinder.tests.unit import utils as test_utils
 from cinder.volume import api as volume_api
 from cinder.volume import api as vol_get
+from cinder.volume import rpcapi
 
 DEFAULT_AZ = "zone1:host1"
 
@@ -980,10 +981,13 @@ class VolumeApiTest(test.TestCase):
         snapshot.create()
         return snapshot
 
+    @mock.patch.object(rpcapi.VolumeAPI, 'can_revert_different_size',
+                       return_value=False)
     @mock.patch.object(objects.Volume, 'get_latest_snapshot')
     @mock.patch.object(volume_api.API, 'get_volume')
     def test_volume_revert_with_snapshot_not_found(self, mock_volume,
-                                                   mock_latest):
+                                                   mock_latest,
+                                                   mock_different_size):
         fake_volume = self._fake_create_volume()
         mock_volume.return_value = fake_volume
         mock_latest.side_effect = exception.VolumeSnapshotNotFound(volume_id=
@@ -997,10 +1001,13 @@ class VolumeApiTest(test.TestCase):
                           req, 'fake_id', {'revert': {'snapshot_id':
                                                       'fake_snapshot_id'}})
 
+    @mock.patch.object(rpcapi.VolumeAPI, 'can_revert_different_size',
+                       return_value=False)
     @mock.patch.object(objects.Volume, 'get_latest_snapshot')
     @mock.patch.object(volume_api.API, 'get_volume')
     def test_volume_revert_with_snapshot_not_match(self, mock_volume,
-                                                   mock_latest):
+                                                   mock_latest,
+                                                   mock_different_size):
         fake_volume = self._fake_create_volume()
         mock_volume.return_value = fake_volume
         fake_snapshot = self._fake_create_snapshot(fake.UUID1)
@@ -1014,6 +1021,8 @@ class VolumeApiTest(test.TestCase):
                           req, 'fake_id', {'revert': {'snapshot_id':
                                                       'fake_snapshot_id'}})
 
+    @mock.patch.object(rpcapi.VolumeAPI, 'can_revert_different_size',
+                       return_value=False)
     @mock.patch.object(objects.Volume, 'get_latest_snapshot')
     @mock.patch('cinder.objects.base.'
                 'CinderPersistentObject.update_single_status_where')
@@ -1021,7 +1030,8 @@ class VolumeApiTest(test.TestCase):
     def test_volume_revert_update_status_failed(self,
                                                 mock_volume,
                                                 mock_update,
-                                                mock_latest):
+                                                mock_latest,
+                                                mock_different_size):
         fake_volume = self._fake_create_volume()
         fake_snapshot = self._fake_create_snapshot(fake_volume['id'])
         mock_volume.return_value = fake_volume
@@ -1048,10 +1058,13 @@ class VolumeApiTest(test.TestCase):
                           req, fake_volume['id'], {'revert': {'snapshot_id':
                                                    fake_snapshot['id']}})
 
+    @mock.patch.object(rpcapi.VolumeAPI, 'can_revert_different_size',
+                       return_value=False)
     @mock.patch.object(objects.Volume, 'get_latest_snapshot')
     @mock.patch.object(volume_api.API, 'get_volume')
     def test_volume_revert_with_not_equal_size(self, mock_volume,
-                                               mock_latest):
+                                               mock_latest,
+                                               mock_different_size):
         fake_volume = self._fake_create_volume(size=2)
         fake_snapshot = self._fake_create_snapshot(fake_volume['id'],
                                                    volume_size=1)
@@ -1065,6 +1078,35 @@ class VolumeApiTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.revert,
                           req, fake_volume['id'],
                           {'revert': {'snapshot_id': fake_snapshot['id']}})
+
+    @mock.patch.object(rpcapi.VolumeAPI, 'can_revert_different_size',
+                       return_value=True)
+    @mock.patch.object(volume_api.API, 'revert_to_snapshot', autospec=True)
+    @mock.patch.object(objects.Volume, 'get_latest_snapshot')
+    @mock.patch.object(volume_api.API, 'get_volume')
+    def test_volume_revert_with_not_equal_size_supported(self, mock_volume,
+                                                         mock_latest,
+                                                         mock_revert,
+                                                         mock_different_size):
+        fake_volume = self._fake_create_volume(size=2)
+        fake_snapshot = self._fake_create_snapshot(fake_volume['id'],
+                                                   volume_size=1)
+        mock_volume.return_value = fake_volume
+        mock_latest.return_value = fake_snapshot
+        req = fakes.HTTPRequest.blank('/v3/volumes/%s/revert'
+                                      % fake_volume['id'])
+        req.headers = mv.get_mv_header(mv.VOLUME_REVERT)
+        req.api_version_request = mv.get_api_version(
+            mv.VOLUME_REVERT)
+        self.controller.revert(
+            req, fake_volume['id'],
+            {'revert': {'snapshot_id': fake_snapshot['id']}},
+        )
+
+        context = req.environ['cinder.context']
+        mock_revert.assert_called_once_with(self.controller.volume_api,
+                                            context, fake_volume,
+                                            fake_snapshot)
 
     def test_view_get_attachments(self):
         fake_volume = self._fake_create_volume()

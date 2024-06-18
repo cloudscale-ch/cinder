@@ -140,9 +140,11 @@ class VolumeAPI(rpc.RPCAPI):
         3.16 - Add no_snapshots to accept_transfer method
         3.17 - Make get_backup_device a cast (async)
         3.18 - Add reimage method
+        3.19 - Add extend_volume_completion method
+        3.20 - Add can_revert_different_size method
     """
 
-    RPC_API_VERSION = '3.18'
+    RPC_API_VERSION = '3.20'
     RPC_DEFAULT_VERSION = '3.0'
     TOPIC = constants.VOLUME_TOPIC
     BINARY = constants.VOLUME_BINARY
@@ -186,6 +188,12 @@ class VolumeAPI(rpc.RPCAPI):
         cctxt = self._get_cctxt(volume.service_topic_queue, version)
         cctxt.cast(ctxt, 'revert_to_snapshot', volume=volume,
                    snapshot=snapshot)
+
+    @rpc.assert_min_rpc_version('3.20')
+    def can_revert_different_size(self, ctxt, volume):
+        version = self._compat_ver('3.20')
+        cctxt = self._get_cctxt(volume.service_topic_queue, version)
+        return cctxt.call(ctxt, 'can_revert_different_size')
 
     def delete_volume(self,
                       ctxt: context.RequestContext,
