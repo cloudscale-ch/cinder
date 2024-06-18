@@ -2278,6 +2278,14 @@ class VolumeDriver(ManageableVD, CloneableImageVD, ManageableSnapshotsVD,
         msg = _("Manage existing volume not implemented.")
         raise NotImplementedError(msg)
 
+    def can_revert_different_size(self):
+        """Determine if the driver supports reverting to a different size.
+
+        Cinder Volume drivers can optinally support reverting to a snapshot of
+        volume with a different (smaller) size.
+        """
+        return False
+
     def revert_to_snapshot(self, context, volume, snapshot):
         """Revert volume to snapshot.
 
