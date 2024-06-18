@@ -326,3 +326,44 @@ class VolumesTest(functional_helpers._FunctionalTestBase):
         found_volume = self.api.get_volume(created_volume_id)
         self.assertEqual(created_volume_id, found_volume['id'])
         self.assertEqual('vol-one', found_volume['name'])
+
+    def test_snapshot_extend_and_revert_volume(self):
+        self.osapi_version = '3.40'
+
+        volume = self.api.post_volume({'volume': {
+            'size': 1, 'name': 'vol1'}})
+
+        # Wait (briefly) for creation. Delay is due to the 'message queue'
+        volume = self._poll_volume_while(volume["id"], ['creating'])
+        self.assertEqual('available', volume['status'])
+
+        # snapshot volume
+        snapshot = self.api.post_snapshot(
+            {'snapshot': {'volume_id': volume["id"],
+                          'name': 'test_snapshot'}})
+
+        # Wait (briefly) for creation. Delay is due to the 'message queue'
+        snapshot = self._poll_snapshot_while(snapshot["id"], ['creating'])
+        self.assertEqual('available', snapshot['status'])
+
+        # extend volume
+        self.api.post_volume_action(
+            volume["id"], {"os-extend": {"new_size": 2}})
+
+        # Wait (briefly) for extension. Delay is due to the 'message queue'
+        volume = self._poll_volume_while(volume["id"], ['extending'])
+        self.assertEqual('available', volume['status'])
+
+        # Check volume is extended
+        self.assertEqual(volume["size"], 2)
+
+        # revert volume
+        self.api.post_volume_action(
+            volume["id"], {'revert': {'snapshot_id': snapshot["id"]}})
+
+        # Wait (briefly) for revertion. Delay is due to the 'message queue'
+        volume = self._poll_volume_while(volume["id"], ['reverting'])
+        self.assertEqual('available', volume['status'])
+
+        # Check volume size changed back to snapshot's size
+        self.assertEqual(volume["size"], 1)

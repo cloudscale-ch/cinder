@@ -231,6 +231,9 @@ class TestOpenStackClient(object):
     def put_volume(self, volume_id, volume):
         return self.api_put('/volumes/%s' % volume_id, volume)['volume']
 
+    def post_volume_action(self, volume_id, action):
+        return self.api_post('/volumes/%s/action' % volume_id, action)
+
     def post_manage_volume(self, host=None, ref=None):
         if not host:
             host = "fake-host"
