@@ -32,6 +32,7 @@ from cinder.tests.unit.policies import test_base
 from cinder.tests.unit import utils as test_utils
 from cinder.volume import api as volume_api
 from cinder.volume import manager as volume_manager
+from cinder.volume import rpcapi
 
 
 @ddt.ddt
@@ -160,7 +161,9 @@ class VolumeActionsPolicyTest(base.BasePolicyTest):
                                  id=volume.id, body=body)
 
     @ddt.data(*base.all_users)
-    def test_revert_policy(self, user_id):
+    @mock.patch.object(rpcapi.VolumeAPI, 'can_revert_different_size',
+                       return_value=False)
+    def test_revert_policy(self, user_id, mock_different_size):
         volume = self._create_volume()
         snap = test_utils.create_snapshot(
             self.project_member_context,
