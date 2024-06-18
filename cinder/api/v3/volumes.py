@@ -36,6 +36,7 @@ from cinder.image import glance
 from cinder import objects
 from cinder.policies import volumes as policy
 from cinder import utils
+from cinder.volume import rpcapi
 
 LOG = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ class VolumeController(volumes_v2.VolumeController):
     def __init__(self, ext_mgr):
         self.group_api = group_api.API()
         self.backup_api = backup_api.API()
+        self.rpcapi = rpcapi.VolumeAPI()
         super(VolumeController, self).__init__(ext_mgr)
 
     def delete(self, req, id):
@@ -237,7 +239,10 @@ class VolumeController(volumes_v2.VolumeController):
                     "the latest one of volume %(v_id)s.")
             raise exc.HTTPBadRequest(explanation=msg % {'s_id': snapshot_id,
                                                         'v_id': volume.id})
-        if volume.size != l_snap.volume_size:
+
+        can_revert_different_size = self.rpcapi.can_revert_different_size(
+            context, volume)
+        if volume.size != l_snap.volume_size and not can_revert_different_size:
             msg = _("Can't revert volume %(v_id)s to its latest snapshot "
                     "%(s_id)s. The volume size must be equal to the snapshot "
                     "size.")
