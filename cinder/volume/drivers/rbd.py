@@ -1586,6 +1586,10 @@ class RBDDriver(driver.CloneableImageVD, driver.MigrateVD,
         """Disable the use of a temporary snapshot on revert."""
         return False
 
+    def can_revert_different_size(self):
+        """Ceph supports reverting to a snapshot of different size."""
+        return True
+
     def revert_to_snapshot(self,
                            context: context.RequestContext,
                            volume: Volume,

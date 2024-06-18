@@ -2290,12 +2290,14 @@ class VolumeTestCase(base.BaseVolumeTestCase):
                 generic_revert.assert_called_once_with(self.context, {}, {})
 
     @ddt.data({},
+              {'size': 1},
               {'has_snapshot': True},
               {'use_temp_snapshot': True},
               {'use_temp_snapshot': True, 'has_snapshot': True})
     @ddt.unpack
     def test_revert_to_snapshot(self, has_snapshot=False,
-                                use_temp_snapshot=False):
+                                use_temp_snapshot=False,
+                                size=2):
         fake_volume = tests_utils.create_volume(self.context,
                                                 status='reverting',
                                                 project_id='123',
@@ -2303,7 +2305,7 @@ class VolumeTestCase(base.BaseVolumeTestCase):
         fake_snapshot = tests_utils.create_snapshot(self.context,
                                                     fake_volume['id'],
                                                     status='restoring',
-                                                    volume_size=1)
+                                                    volume_size=size)
         with mock.patch.object(self.volume,
                                '_revert_to_snapshot') as _revert,\
             mock.patch.object(self.volume,
@@ -2341,7 +2343,7 @@ class VolumeTestCase(base.BaseVolumeTestCase):
             fake_snapshot.refresh()
             self.assertEqual('available', fake_volume['status'])
             self.assertEqual('available', fake_snapshot['status'])
-            self.assertEqual(2, fake_volume['size'])
+            self.assertEqual(size, fake_volume['size'])
 
     def test_revert_to_snapshot_failed(self):
         fake_volume = tests_utils.create_volume(self.context,
