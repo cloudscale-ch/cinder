@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Volumes can now be reverted to snapshots of a different size if the volume
+    driver in use supports this. This allows to take a snapshot of a volume,
+    then extend the volume and afterwards revert the volume to the snapshot.
+    This is currently only supported by the RBD driver.

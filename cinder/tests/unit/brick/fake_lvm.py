@@ -55,6 +55,9 @@ class FakeBrickLVM(object):
     def lv_has_snapshot(self, name):
         return False
 
+    def extend_volume(self, lv_name, new_size):
+        pass
+
     def activate_lv(self, lv, is_snapshot=False, permanent=False):
         pass
 
