@@ -1043,6 +1043,9 @@ class VolumeManager(manager.CleanableManager,
             volume_ref.status = status
             volume_ref.save()
 
+    def can_revert_different_size(self, context):
+        return self.driver.can_revert_different_size()
+
     def _revert_to_snapshot_generic(self,
                                     ctxt: context.RequestContext,
                                     volume,
@@ -1168,6 +1171,49 @@ class VolumeManager(manager.CleanableManager,
                     msg += ("Failed to reset snapshot %(id)s "
                             "status to %(status)s." % msg_args)
                 LOG.exception(msg, msg_args)
+
+        # Adjust volume size if the snapshot has another size
+        if volume.size != snapshot.volume_size:
+            decrease = volume.size - snapshot.volume_size
+
+            # Get reservations
+            reservations = None
+            try:
+                reserve_opts = {
+                    'gigabytes': -decrease,
+                }
+                QUOTAS.add_volume_type_opts(context,
+                                            reserve_opts,
+                                            volume.volume_type_id)
+                reservations = QUOTAS.reserve(context,
+                                              project_id=volume.project_id,
+                                              **reserve_opts)
+            except Exception:
+                LOG.exception("Failed to update usages reverting volume.",
+                              resource=volume)
+
+            volume.update({'size': snapshot.volume_size})
+            volume.save()
+
+            # Commit the reservations
+            if reservations:
+                QUOTAS.commit(context, reservations,
+                              project_id=volume.project_id)
+
+            pool = volume_utils.extract_host(volume.host, 'pool')
+            if pool is None:
+                # Legacy volume, put them into default pool
+                pool = self.driver.configuration.safe_get(
+                    'volume_backend_name') or volume_utils.extract_host(
+                        volume.host, 'pool', True)
+
+            try:
+                self.stats['pools'][pool]['allocated_capacity_gb'] -= decrease
+            except KeyError:
+                self.stats['pools'][pool] = dict(
+                    allocated_capacity_gb=0)
+
+            self.publish_service_capabilities(context)
 
         v_res = volume.update_single_status_where(
             'available', 'reverting')
