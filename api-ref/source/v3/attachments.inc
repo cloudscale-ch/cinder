@@ -41,20 +41,6 @@ Delete attachment
 
 Deletes an attachment.
 
-For security reasons (see bug `#2004555
-<https://bugs.launchpad.net/nova/+bug/2004555>`_) the Block Storage API rejects
-REST API calls manually made from users with a 409 status code if there is a
-Nova instance currently using the attachment, which happens when all the
-following conditions are met:
-
-- Attachment has an instance uuid
-- VM exists in Nova
-- Instance has the volume attached
-- Attached volume in instance is using the attachment
-
-Calls coming from other OpenStack services (like the Compute Service) are
-always accepted.
-
 Available starting in the 3.27 microversion.
 
 Response codes
@@ -68,7 +54,6 @@ Response codes
 
    - 400
    - 404
-   - 409
 
 
 Request
