@@ -1751,12 +1751,13 @@ class RBDTestCase(test.TestCase):
 
     @common_mocks
     def test_cloneable(self):
-        with mock.patch.object(self.driver, '_get_fsid') as mock_get_fsid:
-            mock_get_fsid.return_value = 'abc'
-            location = 'rbd://abc/pool/image/snap'
-            info = {'disk_format': 'raw'}
-            self.assertTrue(self.driver._is_cloneable(location, info))
-            self.assertTrue(mock_get_fsid.called)
+        for disk_format in ('raw', 'iso'):
+            with mock.patch.object(self.driver, '_get_fsid') as mock_get_fsid:
+                mock_get_fsid.return_value = 'abc'
+                location = 'rbd://abc/pool/image/snap'
+                info = {'disk_format': disk_format}
+                self.assertTrue(self.driver._is_cloneable(location, info))
+                self.assertTrue(mock_get_fsid.called)
 
     @common_mocks
     def test_uncloneable_different_fsid(self):

@@ -1932,9 +1932,9 @@ class RBDDriver(driver.CloneableImageVD, driver.MigrateVD,
             LOG.debug('%s is in a different ceph cluster.', image_location)
             return False
 
-        if image_meta['disk_format'] != 'raw':
-            LOG.debug("rbd image clone requires image format to be "
-                      "'raw' but image %(image)s is '%(format)s'",
+        if image_meta['disk_format'] not in ('raw', 'iso'):
+            LOG.debug("RBD image clone requires image format to be "
+                      "'raw' or 'iso', but image %(image)s is '%(format)s'",
                       {"image": image_location,
                        "format": image_meta['disk_format']})
             return False
